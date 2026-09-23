@@ -1,8 +1,10 @@
-import { Link } from "react-router-dom";
-import { motion } from "motion/react";
-import type { Article } from "../data/articles";
-import { cn } from "../lib/utils";
-import { FadeImage } from "./FadeImage";
+'use client';
+
+import Link from 'next/link';
+import { motion } from 'motion/react';
+import type { Article } from '@/src/data/articles';
+import { cn } from '@/src/lib/utils';
+import { FadeImage } from './FadeImage';
 
 interface ArticleCardProps {
   article: Article;
@@ -11,18 +13,20 @@ interface ArticleCardProps {
 }
 
 export function ArticleCard({ article, featured = false, index }: ArticleCardProps) {
+  const primaryCategory = article.categories?.[0] || article.tags?.[0] || 'Culture';
+
   return (
     <motion.article 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.6, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
         "group flex flex-col gap-6",
         featured ? "md:flex-row md:items-center md:gap-12" : ""
       )}
     >
       <Link 
-        to={`/post/${article.slug}`} 
+        href={`/blog/${article.slug}`} 
         className={cn(
           "block overflow-hidden rounded-sm bg-ink/5",
           featured ? "aspect-[16/9] md:aspect-[4/3] md:w-3/5" : "aspect-[4/3] w-full"
@@ -44,10 +48,15 @@ export function ArticleCard({ article, featured = false, index }: ArticleCardPro
         <div className="mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-ink-light">
           <span>{article.date}</span>
           <span className="h-1 w-1 rounded-full bg-ink/20"></span>
-          <span>{article.tags[0]}</span>
+          <Link 
+            href={`/category/${primaryCategory.toLowerCase().replace(/\s+/g, '-')}`}
+            className="hover:text-accent transition-colors"
+          >
+            {primaryCategory}
+          </Link>
         </div>
         
-        <Link to={`/post/${article.slug}`} className="group-hover:text-accent transition-colors">
+        <Link href={`/blog/${article.slug}`} className="group-hover:text-accent transition-colors">
           <h2 className={cn(
             "font-serif leading-tight text-ink",
             featured ? "text-3xl md:text-5xl mb-4" : "text-2xl mb-3"

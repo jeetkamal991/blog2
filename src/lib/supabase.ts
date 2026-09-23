@@ -1,13 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Default Supabase project credentials provided by the user
+// Default Supabase project endpoints provided by user
 export const DEFAULT_SUPABASE_URL = "https://andtmfgdyrdyrmsuzcjn.supabase.co";
-export const DEFAULT_SUPABASE_KEY = "sb_publishable_41GzkOV3yuFvpC8kEl_ZSg_1Ic06kTm";
+export const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_41GzkOV3yuFvpC8kEl_ZSg_1Ic06kTm";
 
-// Client retrieves either configured environment variable or defaults to provided project
-const meta = import.meta as unknown as { env?: Record<string, string> };
-const supabaseUrl = meta.env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-const supabaseKey = meta.env?.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY;
+// Detect Next.js client/server environment variables safely
+const supabaseUrl = 
+  (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_URL) ||
+  DEFAULT_SUPABASE_URL;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseAnonKey = 
+  (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
+  DEFAULT_SUPABASE_ANON_KEY;
 
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

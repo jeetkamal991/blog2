@@ -1,40 +1,36 @@
-import { supabase, DEFAULT_SUPABASE_URL } from '../lib/supabase';
-import { articles as initialArticles, Article } from '../data/articles';
+import { supabase } from '@/src/lib/supabase';
+import { articles as initialArticles, Article } from '@/src/data/articles';
 
-const STORAGE_KEY = 'editorial_blog_posts_cache';
+const STORAGE_KEY = 'editorial_blog_articles_cache_v2';
 
-// Load cached posts or seed with initial rich articles
-export function getLocalArticles(): Article[] {
+function getLocalArticles(): Article[] {
+  if (typeof window === 'undefined') return initialArticles;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialArticles));
+      return initialArticles;
     }
+    return JSON.parse(raw);
   } catch {
-    // ignore parsing errors
+    return initialArticles;
   }
-  // Fallback to initial seed articles
-  return initialArticles;
 }
 
-export function saveLocalArticles(articles: Article[]): void {
+function saveLocalArticles(articles: Article[]): void {
+  if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
-  } catch (err) {
-    console.error('Error saving local articles:', err);
+  } catch (e) {
+    console.error('Failed to save to localStorage', e);
   }
 }
 
-/**
- * Service to fetch, create, update, and delete blog articles.
- * Attempts to communicate with Supabase Postgres table `articles`.
- * If the remote table has not yet been initialized in the user's Supabase dashboard,
- * it seamlessly falls back to persistent client-side cache while informing the admin.
- */
 export const BlogService = {
+  /**
+   * Fetch all articles.
+   * Can run in Next.js Server Components or Client Components.
+   */
   async getArticles(): Promise<{ articles: Article[]; isFromSupabase: boolean; error?: string }> {
     try {
       const { data, error } = await supabase
@@ -68,11 +64,12 @@ export const BlogService = {
           },
           content: item.content || ''
         }));
+
         saveLocalArticles(mapped);
         return { articles: mapped, isFromSupabase: true };
       }
 
-      // If table empty or table doesn't exist yet, return cached / seeded
+      // If Supabase table is not populated or empty, return seeded articles
       const local = getLocalArticles();
       return { 
         articles: local, 
@@ -89,6 +86,9 @@ export const BlogService = {
     }
   },
 
+  /**
+   * Fetch single article by slug
+   */
   async getArticleBySlug(slug: string): Promise<Article | null> {
     try {
       const { data, error } = await supabase
@@ -104,9 +104,16 @@ export const BlogService = {
           title: data.title,
           excerpt: data.excerpt || '',
           coverImage: data.cover_image || 'https://picsum.photos/seed/blog/1600/900',
-          date: data.date || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          date: data.date || new Date(data.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
           readTime: data.read_time || '5 min read',
           tags: Array.isArray(data.tags) ? data.tags : (data.tags ? String(data.tags).split(',').map(s => s.trim()) : ['General']),
+          categories: Array.isArray(data.categories) ? data.categories : (data.categories ? String(data.categories).split(',').map(s => s.trim()) : ['Culture']),
+          status: data.status || 'published',
+          publishedDate: data.published_date || data.created_at || new Date().toISOString(),
+          seoTitle: data.seo_title || data.title,
+          seoDescription: data.seo_description || data.excerpt || '',
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
           author: {
             name: data.author_name || 'Jane Doe',
             avatar: data.author_avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
@@ -118,13 +125,27 @@ export const BlogService = {
         };
       }
     } catch {
-      // fallback to local list
+      // fallback
     }
 
     const localList = getLocalArticles();
     return localList.find((a) => a.slug === slug) || null;
   },
 
+  /**
+   * Fetch articles by category
+   */
+  async getArticlesByCategory(categorySlug: string): Promise<Article[]> {
+    const { articles } = await this.getArticles();
+    return articles.filter((a) => {
+      const cats = a.categories || a.tags || [];
+      return cats.some(c => c.toLowerCase().replace(/\s+/g, '-') === categorySlug.toLowerCase());
+    });
+  },
+
+  /**
+   * Upsert article into Supabase + Local Cache
+   */
   async saveArticle(article: Partial<Article> & { title: string; slug: string }): Promise<{ success: boolean; error?: string }> {
     const payload = {
       slug: article.slug,
@@ -165,7 +186,7 @@ export const BlogService = {
       supabaseError = e instanceof Error ? e.message : 'Network error';
     }
 
-    // Always update local cache so the user sees their changes instantly
+    // Always update local cache so changes show instantly
     const local = getLocalArticles();
     const existingIdx = local.findIndex(a => a.id === article.id || a.slug === article.slug);
     const updatedArticle: Article = {
@@ -215,16 +236,16 @@ export const BlogService = {
       supabaseError = e instanceof Error ? e.message : 'Network error';
     }
 
-    const local = getLocalArticles().filter(a => a.id !== id && a.slug !== slug);
-    saveLocalArticles(local);
+    const local = getLocalArticles();
+    const filtered = local.filter(a => a.id !== id && a.slug !== slug);
+    saveLocalArticles(filtered);
 
-    return { success: true, error: supabaseError };
+    return { 
+      success: true, 
+      error: supabaseError 
+    };
   },
 
-  /**
-   * Generates the complete SQL schema matching Payload CMS collections:
-   * users, media, categories, posts with relationships, statuses, and SEO fields
-   */
   getSchemaSQL(): string {
     return `
 -- ===================================================

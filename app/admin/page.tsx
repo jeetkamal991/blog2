@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Database, Plus, Edit3, Trash2, CheckCircle2, AlertCircle, 
-  ArrowLeft, RefreshCw, Copy, Check, ExternalLink, Globe, LayoutDashboard,
-  Users, Image as ImageIcon, FolderTree, FileText, Search, Sparkles
-} from "lucide-react";
-import { BlogService } from "../services/blogService";
-import { Article } from "../data/articles";
-import { DEFAULT_SUPABASE_URL } from "../lib/supabase";
-import { UsersCollection, PostsCollection, MediaCollection, CategoriesCollection } from "../payload/config";
-import { PayloadUser, PayloadCategory, PayloadMedia } from "../payload/types";
+  ArrowLeft, RefreshCw, Copy, Check, ExternalLink, LogOut,
+  Users, Image as ImageIcon, FolderTree, FileText, Search, Sparkles, Lock
+} from 'lucide-react';
+import { BlogService } from '@/src/services/blogService';
+import { Article } from '@/src/data/articles';
+import { DEFAULT_SUPABASE_URL } from '@/src/lib/supabase';
+import { PayloadUser, PayloadCategory, PayloadMedia } from '@/src/payload/types';
 
-// Seed data for Collections
 const initialUsers: PayloadUser[] = [
   {
     id: "usr-1",
@@ -51,7 +52,10 @@ const initialMedia: PayloadMedia[] = [
 
 type ActiveTab = 'posts' | 'users' | 'media' | 'categories' | 'config';
 
-export function AdminCMS() {
+export default function AdminDashboardPage() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('posts');
   const [articles, setArticles] = useState<Article[]>([]);
   const [users, setUsers] = useState<PayloadUser[]>(initialUsers);
@@ -62,8 +66,6 @@ export function AdminCMS() {
   const [isFromSupabase, setIsFromSupabase] = useState(false);
   const [copiedSQL, setCopiedSQL] = useState(false);
   const [showSQLModal, setShowSQLModal] = useState(false);
-
-  // Search filter
   const [searchQuery, setSearchQuery] = useState("");
 
   // Post Editor modal state
@@ -88,7 +90,6 @@ export function AdminCMS() {
     }
   });
 
-  // Category & User Modal States
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [currentCategory, setCurrentCategory] = useState({ name: "", slug: "", description: "" });
 
@@ -98,6 +99,28 @@ export function AdminCMS() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
+  // Check auth session
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('cms_auth_token');
+      if (!token) {
+        setIsAuthenticated(false);
+        router.push('/admin/login');
+      } else {
+        setIsAuthenticated(true);
+        loadData();
+      }
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cms_auth_token');
+      localStorage.removeItem('cms_auth_user');
+    }
+    router.push('/admin/login');
+  };
+
   const loadData = async () => {
     setLoading(true);
     const res = await BlogService.getArticles();
@@ -105,10 +128,6 @@ export function AdminCMS() {
     setIsFromSupabase(res.isFromSupabase);
     setLoading(false);
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const handleOpenNewPost = () => {
     setCurrentArticle({
@@ -119,13 +138,13 @@ export function AdminCMS() {
       coverImage: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/1600/900`,
       date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
       readTime: "5 min read",
-      tags: ["Essays"],
+      tags: ["Writing"],
       categories: ["Culture"],
       status: "published",
       publishedDate: new Date().toISOString().split("T")[0],
       seoTitle: "",
       seoDescription: "",
-      content: "Write your editorial post here...\n\nEvery story begins with a single observation.",
+      content: "Write your editorial essay here...\n\nEvery journey starts with a simple observation.",
       author: {
         name: users[0]?.name || "Jane Doe",
         avatar: users[0]?.avatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
@@ -163,7 +182,7 @@ export function AdminCMS() {
     setSaving(false);
 
     if (res.error) {
-      setSaveStatus(`Saved locally. Supabase notice: ${res.error}`);
+      setSaveStatus(`Saved locally. Supabase: ${res.error}`);
     } else {
       setSaveStatus("Post saved & synced successfully!");
     }
@@ -172,7 +191,7 @@ export function AdminCMS() {
     setTimeout(() => {
       setIsEditingPost(false);
       setSaveStatus(null);
-    }, 800);
+    }, 600);
   };
 
   const handleDeletePost = async (id: string, slug: string) => {
@@ -221,6 +240,14 @@ export function AdminCMS() {
     setTimeout(() => setCopiedSQL(false), 2000);
   };
 
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-[#F7F6F2] flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    );
+  }
+
   const filteredArticles = articles.filter(a => 
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     a.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -234,11 +261,11 @@ export function AdminCMS() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
             <Link 
-              to="/" 
+              href="/" 
               className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-light hover:text-ink transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Back to Blog</span>
+              <span>Public Blog</span>
             </Link>
             <div className="h-4 w-px bg-ink/10" />
             <div className="flex items-center gap-2">
@@ -252,17 +279,24 @@ export function AdminCMS() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowSQLModal(true)}
-              className="flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/5 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/5 transition-colors"
             >
               <Database className="h-3.5 w-3.5 text-accent" />
-              <span>Supabase Schema SQL</span>
+              <span>Schema SQL</span>
             </button>
             <button
               onClick={handleOpenNewPost}
-              className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-accent/90 transition-colors"
+              className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-accent/90 transition-colors cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>New Post</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              title="Sign Out"
+              className="p-2 text-ink-light hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -276,7 +310,7 @@ export function AdminCMS() {
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1">
             <button
               onClick={() => setActiveTab('posts')}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'posts' 
                   ? 'bg-ink text-white shadow-xs' 
                   : 'bg-white text-ink-light hover:text-ink hover:bg-ink/5 border border-ink/10'
@@ -291,14 +325,14 @@ export function AdminCMS() {
 
             <button
               onClick={() => setActiveTab('users')}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'users' 
                   ? 'bg-ink text-white shadow-xs' 
                   : 'bg-white text-ink-light hover:text-ink hover:bg-ink/5 border border-ink/10'
               }`}
             >
               <Users className="h-4 w-4" />
-              <span>Users / Authors</span>
+              <span>Users</span>
               <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'users' ? 'bg-white/20' : 'bg-ink/5'}`}>
                 {users.length}
               </span>
@@ -306,7 +340,7 @@ export function AdminCMS() {
 
             <button
               onClick={() => setActiveTab('media')}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'media' 
                   ? 'bg-ink text-white shadow-xs' 
                   : 'bg-white text-ink-light hover:text-ink hover:bg-ink/5 border border-ink/10'
@@ -321,7 +355,7 @@ export function AdminCMS() {
 
             <button
               onClick={() => setActiveTab('categories')}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'categories' 
                   ? 'bg-ink text-white shadow-xs' 
                   : 'bg-white text-ink-light hover:text-ink hover:bg-ink/5 border border-ink/10'
@@ -336,14 +370,14 @@ export function AdminCMS() {
 
             <button
               onClick={() => setActiveTab('config')}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'config' 
                   ? 'bg-ink text-white shadow-xs' 
                   : 'bg-white text-ink-light hover:text-ink hover:bg-ink/5 border border-ink/10'
               }`}
             >
               <Sparkles className="h-4 w-4 text-amber-500" />
-              <span>Payload Config File</span>
+              <span>Payload Collections Config</span>
             </button>
           </div>
 
@@ -354,12 +388,12 @@ export function AdminCMS() {
                 : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}>
               <span className={`h-2 w-2 rounded-full ${isFromSupabase ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              {isFromSupabase ? 'Supabase PostgreSQL' : 'Local Fallback Cache'}
+              {isFromSupabase ? 'Supabase Connected' : 'Local Fallback Active'}
             </span>
           </div>
         </div>
 
-        {/* TAB 1: POSTS COLLECTION */}
+        {/* TAB 1: POSTS */}
         {activeTab === 'posts' && (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-ink/10 shadow-xs">
@@ -385,7 +419,7 @@ export function AdminCMS() {
                 </button>
                 <button
                   onClick={handleOpenNewPost}
-                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 transition-colors cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Create Post</span>
@@ -401,8 +435,8 @@ export function AdminCMS() {
                 </div>
               ) : filteredArticles.length === 0 ? (
                 <div className="py-16 text-center text-ink-light">
-                  <p className="font-serif text-lg text-ink">No posts match your search</p>
-                  <p className="text-xs mt-1">Try a different keyword or create a new blog post.</p>
+                  <p className="font-serif text-lg text-ink">No posts found</p>
+                  <p className="text-xs mt-1">Click &ldquo;Create Post&rdquo; to publish your first entry.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-ink/5 overflow-x-auto">
@@ -418,7 +452,7 @@ export function AdminCMS() {
                           <div className="flex items-center gap-2">
                             <h4 className="text-base font-serif font-medium text-ink truncate">{item.title}</h4>
                             <Link 
-                              to={`/post/${item.slug}`} 
+                              href={`/blog/${item.slug}`} 
                               target="_blank"
                               title="Preview on live blog"
                               className="text-ink-light hover:text-accent transition-colors"
@@ -428,7 +462,7 @@ export function AdminCMS() {
                           </div>
                           
                           <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-ink-light">
-                            <span className="font-mono text-[11px] text-ink/60">/post/{item.slug}</span>
+                            <span className="font-mono text-[11px] text-ink/60">/blog/{item.slug}</span>
                             <span>•</span>
                             <span className="font-medium text-ink">{item.author.name}</span>
                             <span>•</span>
@@ -451,14 +485,14 @@ export function AdminCMS() {
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           onClick={() => handleOpenEditPost(item)}
-                          className="flex items-center gap-1.5 rounded-lg border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/5 transition-colors"
+                          className="flex items-center gap-1.5 rounded-lg border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/5 transition-colors cursor-pointer"
                         >
                           <Edit3 className="h-3.5 w-3.5 text-ink-light" />
                           <span>Edit</span>
                         </button>
                         <button
                           onClick={() => handleDeletePost(item.id, item.slug)}
-                          className="p-2 text-ink-light hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                          className="p-2 text-ink-light hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 cursor-pointer"
                           title="Delete post"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -472,17 +506,17 @@ export function AdminCMS() {
           </div>
         )}
 
-        {/* TAB 2: USERS / AUTHORS COLLECTION */}
+        {/* TAB 2: USERS */}
         {activeTab === 'users' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-ink/10 shadow-xs">
               <div>
-                <h3 className="font-serif text-lg font-medium text-ink">Users Collection (Authors &amp; Admins)</h3>
-                <p className="text-xs text-ink-light">Payload Authentication and Author relationships for posts</p>
+                <h3 className="font-serif text-lg font-medium text-ink">Users &amp; Authors Collection</h3>
+                <p className="text-xs text-ink-light">Payload Authentication and Post Relationships</p>
               </div>
               <button
                 onClick={() => setIsEditingUser(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 transition-colors cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add User</span>
@@ -517,13 +551,13 @@ export function AdminCMS() {
           </div>
         )}
 
-        {/* TAB 3: MEDIA COLLECTION */}
+        {/* TAB 3: MEDIA */}
         {activeTab === 'media' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-ink/10 shadow-xs">
               <div>
                 <h3 className="font-serif text-lg font-medium text-ink">Media Collection</h3>
-                <p className="text-xs text-ink-light">Uploaded assets, featured post images, and alt text records</p>
+                <p className="text-xs text-ink-light">Images, cover photographs, and alt attributes</p>
               </div>
             </div>
 
@@ -544,17 +578,17 @@ export function AdminCMS() {
           </div>
         )}
 
-        {/* TAB 4: CATEGORIES COLLECTION */}
+        {/* TAB 4: CATEGORIES */}
         {activeTab === 'categories' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-ink/10 shadow-xs">
               <div>
                 <h3 className="font-serif text-lg font-medium text-ink">Categories Collection</h3>
-                <p className="text-xs text-ink-light">Taxonomies related to blog posts in Payload</p>
+                <p className="text-xs text-ink-light">Taxonomies linked directly to blog posts</p>
               </div>
               <button
                 onClick={() => setIsEditingCategory(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 transition-colors cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add Category</span>
@@ -579,19 +613,19 @@ export function AdminCMS() {
           </div>
         )}
 
-        {/* TAB 5: PAYLOAD CONFIG SPECIFICATION */}
+        {/* TAB 5: CONFIG */}
         {activeTab === 'config' && (
           <div className="bg-white rounded-xl border border-ink/10 p-6 shadow-xs space-y-6">
             <div>
               <h3 className="font-serif text-xl font-medium text-ink">Payload CMS Collection Architecture</h3>
               <p className="text-xs text-ink-light mt-1">
-                Defined in <code className="font-mono bg-ink/5 px-1.5 py-0.5 rounded text-accent">src/payload/config.ts</code> with the exact requested fields &amp; relationships.
+                Configured in <code className="font-mono bg-ink/5 px-1.5 py-0.5 rounded text-accent">src/payload/config.ts</code>
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-ink/5 border border-ink/10">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink mb-2">1. Posts Collection Fields</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink mb-2">1. Posts Collection Schema</h4>
                 <ul className="text-xs space-y-1 font-mono text-ink-light">
                   <li>• title (text, required)</li>
                   <li>• slug (text, unique, required)</li>
@@ -609,17 +643,17 @@ export function AdminCMS() {
               </div>
 
               <div className="p-4 rounded-lg bg-ink/5 border border-ink/10">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink mb-2">2. Associated Collections</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink mb-2">2. Supabase Integration</h4>
                 <ul className="text-xs space-y-1 font-mono text-ink-light">
-                  <li>• <strong>Users</strong>: email, name, role (admin/editor/author), avatar, bio</li>
-                  <li>• <strong>Media</strong>: alt, url, filename, mimeType, filesize, width, height</li>
-                  <li>• <strong>Categories</strong>: name, slug, description</li>
+                  <li>• Endpoint: {DEFAULT_SUPABASE_URL}</li>
+                  <li>• Row Level Security: Enabled</li>
+                  <li>• Safe Idempotent Policies: Active</li>
+                  <li>• Local cache fallback for resilience</li>
                 </ul>
               </div>
             </div>
           </div>
         )}
-
       </main>
 
       {/* POST EDITOR SLIDE-OVER */}
@@ -635,7 +669,7 @@ export function AdminCMS() {
               </div>
               <button 
                 onClick={() => setIsEditingPost(false)} 
-                className="text-xs font-semibold uppercase tracking-wider text-ink-light hover:text-ink"
+                className="text-xs font-semibold uppercase tracking-wider text-ink-light hover:text-ink cursor-pointer"
               >
                 Close
               </button>
@@ -705,11 +739,11 @@ export function AdminCMS() {
                 </div>
               </div>
 
-              {/* Relationships: Author & Category */}
+              {/* Author & Categories Relationships */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-ink/10 pt-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-ink mb-1">
-                    Author (Users Relationship)
+                    Author (Relationship)
                   </label>
                   <select
                     value={currentArticle.author?.name || "Jane Doe"}
@@ -736,7 +770,7 @@ export function AdminCMS() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-ink mb-1">
-                    Categories (Relationship)
+                    Category (Relationship)
                   </label>
                   <select
                     value={currentArticle.categories?.[0] || "Culture"}
@@ -754,7 +788,7 @@ export function AdminCMS() {
               <div className="space-y-4 border-t border-ink/10 pt-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-ink mb-1">
-                    Featured Image URL (Media upload)
+                    Featured Image URL (Media)
                   </label>
                   <input
                     type="url"
@@ -785,7 +819,7 @@ export function AdminCMS() {
                       excerpt: e.target.value,
                       seoDescription: prev.seoDescription || e.target.value
                     }))}
-                    placeholder="A brief editorial lead for article cards and RSS..."
+                    placeholder="Brief editorial summary for cards and search..."
                     className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
@@ -835,148 +869,16 @@ export function AdminCMS() {
                 <button
                   type="button"
                   onClick={() => setIsEditingPost(false)}
-                  className="rounded-full border border-ink/15 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ink hover:bg-ink/5"
+                  className="rounded-full border border-ink/15 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ink hover:bg-ink/5 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-full bg-accent px-6 py-2 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-accent/90 disabled:opacity-50"
+                  className="rounded-full bg-accent px-6 py-2 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-accent/90 disabled:opacity-50 cursor-pointer"
                 >
                   {saving ? "Saving..." : "Save Post"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* CREATE CATEGORY MODAL */}
-      {isEditingCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
-            <h3 className="font-serif text-lg font-medium text-ink mb-4">Add New Category</h3>
-            <form onSubmit={handleSaveCategory} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Category Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={currentCategory.name}
-                  onChange={(e) => setCurrentCategory(prev => ({
-                    ...prev,
-                    name: e.target.value,
-                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-                  }))}
-                  className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
-                  placeholder="e.g. Architecture"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Slug *</label>
-                <input
-                  type="text"
-                  required
-                  value={currentCategory.slug}
-                  onChange={(e) => setCurrentCategory(prev => ({ ...prev, slug: e.target.value }))}
-                  className="w-full rounded-lg border border-ink/15 px-3 py-2 text-xs font-mono text-ink focus:border-accent focus:outline-none"
-                  placeholder="architecture"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Description</label>
-                <textarea
-                  rows={2}
-                  value={currentCategory.description}
-                  onChange={(e) => setCurrentCategory(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
-                  placeholder="Category description..."
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingCategory(false)}
-                  className="px-4 py-2 text-xs font-semibold text-ink-light hover:text-ink"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-full bg-accent px-5 py-2 text-xs font-semibold text-white hover:bg-accent/90"
-                >
-                  Save Category
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* CREATE USER MODAL */}
-      {isEditingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
-            <h3 className="font-serif text-lg font-medium text-ink mb-4">Add User / Author</h3>
-            <form onSubmit={handleSaveUser} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={currentUser.name}
-                  onChange={(e) => setCurrentUser(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
-                  placeholder="e.g. Jordan Smith"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={currentUser.email}
-                  onChange={(e) => setCurrentUser(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
-                  placeholder="jordan@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Role</label>
-                <select
-                  value={currentUser.role}
-                  onChange={(e) => setCurrentUser(prev => ({ ...prev, role: e.target.value as any }))}
-                  className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none bg-white"
-                >
-                  <option value="author">Author</option>
-                  <option value="editor">Editor</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Biography</label>
-                <textarea
-                  rows={2}
-                  value={currentUser.bio}
-                  onChange={(e) => setCurrentUser(prev => ({ ...prev, bio: e.target.value }))}
-                  className="w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
-                  placeholder="Short author bio..."
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingUser(false)}
-                  className="px-4 py-2 text-xs font-semibold text-ink-light hover:text-ink"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-full bg-accent px-5 py-2 text-xs font-semibold text-white hover:bg-accent/90"
-                >
-                  Save User
                 </button>
               </div>
             </form>
@@ -991,18 +893,18 @@ export function AdminCMS() {
             <div className="flex items-center justify-between pb-4 border-b border-ink/10">
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-accent" />
-                <h3 className="font-serif text-xl font-medium text-ink">Supabase PostgreSQL Schema Setup</h3>
+                <h3 className="font-serif text-xl font-medium text-ink">Supabase PostgreSQL Schema</h3>
               </div>
               <button 
                 onClick={() => setShowSQLModal(false)}
-                className="text-xs uppercase font-semibold text-ink-light hover:text-ink"
+                className="text-xs uppercase font-semibold text-ink-light hover:text-ink cursor-pointer"
               >
                 Close
               </button>
             </div>
 
             <p className="mt-4 text-xs text-ink-light leading-relaxed">
-              This SQL creates the tables for <strong>Users</strong>, <strong>Media</strong>, <strong>Categories</strong>, and <strong>Articles/Posts</strong> with all relationships, status checks, and safe RLS policies:
+              Safe idempotent SQL with <code className="font-mono">DROP POLICY IF EXISTS</code> for Users, Media, Categories, and Posts:
             </p>
 
             <div className="relative mt-3">
@@ -1011,7 +913,7 @@ export function AdminCMS() {
               </pre>
               <button
                 onClick={copySQLToClipboard}
-                className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-paper/20 hover:bg-paper/30 px-3 py-1.5 text-[11px] font-medium text-paper transition-colors"
+                className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-paper/20 hover:bg-paper/30 px-3 py-1.5 text-[11px] font-medium text-paper transition-colors cursor-pointer"
               >
                 {copiedSQL ? (
                   <>
@@ -1039,7 +941,7 @@ export function AdminCMS() {
               </a>
               <button
                 onClick={() => setShowSQLModal(false)}
-                className="rounded-full bg-ink px-5 py-2 text-xs font-semibold uppercase tracking-wider text-paper hover:bg-ink-light transition-colors"
+                className="rounded-full bg-ink px-5 py-2 text-xs font-semibold uppercase tracking-wider text-paper hover:bg-ink-light transition-colors cursor-pointer"
               >
                 Done
               </button>

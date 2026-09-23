@@ -1,9 +1,11 @@
-import { motion } from "motion/react";
-import { useState } from "react";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
-import { Lightbox } from "../components/Lightbox";
-import { FadeImage } from "../components/FadeImage";
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import { Header } from '@/src/components/Header';
+import { Footer } from '@/src/components/Footer';
+import { Lightbox } from '@/src/components/Lightbox';
+import { FadeImage } from '@/src/components/FadeImage';
 
 const photos = [
   { src: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?q=80&w=800&h=1200&fit=crop", width: 800, height: 1200, alt: "Urban landscape", caption: "Tokyo, 2023" },
@@ -20,7 +22,7 @@ const photos = [
   { src: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1600&h=1200&fit=crop", width: 1600, height: 1200, alt: "Canyon", caption: "Vastness" },
 ];
 
-export function Photography() {
+export default function PhotographyPage() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   return (
@@ -34,6 +36,9 @@ export function Photography() {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="mb-12"
           >
+            <span className="text-xs font-semibold uppercase tracking-widest text-accent mb-2 block">
+              Visual Essays &amp; Archive
+            </span>
             <h1 className="font-serif text-5xl font-medium tracking-tight text-ink md:text-6xl">
               Selected Works
             </h1>
@@ -55,7 +60,7 @@ export function Photography() {
                 viewport={{ once: true, margin: "100px" }}
                 transition={{ duration: 0.6, delay: (idx % 4) * 0.1 }}
                 onClick={() => setSelectedIndex(idx)}
-                className="group relative block w-full break-inside-avoid overflow-hidden bg-ink/5 cursor-zoom-in"
+                className="group relative block w-full break-inside-avoid overflow-hidden bg-ink/5 cursor-zoom-in text-left"
               >
                 <FadeImage
                   src={photo.src}
@@ -64,7 +69,7 @@ export function Photography() {
                   height={photo.height}
                   referrerPolicy="no-referrer"
                   loading="lazy"
-                  className="w-full h-auto object-cover group-hover:scale-105"
+                  className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                 <div className="absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 text-left">

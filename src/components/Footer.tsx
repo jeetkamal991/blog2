@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import Link from 'next/link';
 
 export function Footer() {
   return (
@@ -15,30 +15,32 @@ export function Footer() {
           <div className="flex flex-col gap-4">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-light">Explore</h4>
             <nav className="flex flex-col gap-2">
-              <Link to="/" className="text-sm hover:text-accent transition-colors">Essays</Link>
-              <Link to="/photography" className="text-sm hover:text-accent transition-colors">Photography</Link>
-              <Link to="/" className="text-sm hover:text-accent transition-colors">Travel</Link>
-              <Link to="/about" className="text-sm hover:text-accent transition-colors">About</Link>
+              <Link href="/blog" className="text-sm hover:text-accent transition-colors">All Essays</Link>
+              <Link href="/category/travel" className="text-sm hover:text-accent transition-colors">Travel</Link>
+              <Link href="/category/photography" className="text-sm hover:text-accent transition-colors">Photography</Link>
+              <Link href="/photography" className="text-sm hover:text-accent transition-colors">Photo Works</Link>
+              <Link href="/about" className="text-sm hover:text-accent transition-colors">About</Link>
+              <Link href="/admin" className="text-sm text-accent hover:underline font-medium">CMS Admin</Link>
             </nav>
           </div>
           
           <div className="flex flex-col gap-4">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-light">Connect</h4>
             <nav className="flex flex-col gap-2">
-              <a href="#" className="text-sm hover:text-accent transition-colors">Twitter</a>
-              <a href="#" className="text-sm hover:text-accent transition-colors">Instagram</a>
-              <a href="#" className="text-sm hover:text-accent transition-colors">Substack</a>
-              <a href="#" className="text-sm hover:text-accent transition-colors">Email</a>
+              <a href="https://twitter.com" target="_blank" rel="noreferrer" className="text-sm hover:text-accent transition-colors">Twitter</a>
+              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="text-sm hover:text-accent transition-colors">Instagram</a>
+              <a href="https://substack.com" target="_blank" rel="noreferrer" className="text-sm hover:text-accent transition-colors">Substack</a>
+              <a href="mailto:hello@janedoe.com" className="text-sm hover:text-accent transition-colors">Email</a>
             </nav>
           </div>
         </div>
         
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-ink/5 pt-8 sm:flex-row text-center sm:text-left">
           <p className="text-xs text-ink-light">
-            &copy; {new Date().getFullYear()} Jane Doe. All rights reserved.
+            &copy; {new Date().getFullYear()} Jane Doe. Powered by Next.js &amp; Supabase Payload CMS.
           </p>
           <p className="text-xs text-ink-light max-w-md sm:text-right">
-            Photos from <a href="https://unsplash.com" target="_blank" rel="noreferrer" className="underline hover:text-accent transition-colors">Unsplash</a>. This is a blog template that people can remix.
+            Photos from <a href="https://unsplash.com" target="_blank" rel="noreferrer" className="underline hover:text-accent transition-colors">Unsplash</a>.
           </p>
         </div>
       </div>
