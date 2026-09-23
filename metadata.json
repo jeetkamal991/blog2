@@ -1,0 +1,8 @@
+{
+  "name": "Remix Personal Blog Template",
+  "description": "A modern editorial blog with Supabase cloud backend, live CMS article manager, and immersive storytelling views.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
